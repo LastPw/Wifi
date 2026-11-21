@@ -15,17 +15,22 @@ bash setup.sh
 خودش محیط را تشخیص می‌دهد (Termux / Debian-Ubuntu-Kali / Fedora / Arch / macOS / Git-Bash) و:
 
 1. پایتون و pip را نصب/به‌روز می‌کند
-2. `scapy` را نصب می‌کند (کپچر زنده)
-3. ابزارهای همراه را اگر در مخزن سیستم بود نصب می‌کند: `termux-api`، `hashcat`، `aircrack-ng`، `hcxdumptool`، `reaver`، `pixiewps`، `hostapd`، `dnsmasq`، `tshark`، `iw`، `tcpdump`، `tsu`
-4. روی Termux: حافظه مشترک، `wake-lock`، باز کردن تنظیمات Termux:API برای مجوز Location، تنظیم مسیر خروجی روی `~/storage/shared/WiFiHunter`
-5. لانچر `wh` می‌سازد و `~/.bashrc` را وصل می‌کند
+2. **همه‌ی ۱۴ نیازمندی** را یکی‌یکی چک می‌کند و هرکدام نبود: از مخزن نصب → وگرنه از سورس کامپایل (`clang/make/autoconf` و کتابخانه‌ها را هم خودش می‌نصب)
+
+   `scapy`, `pywifi`, `tshark`, `dumpcap`, `hashcat`, `aircrack-ng`, `hcxdumptool`, `hcxtools`, `reaver`, `bully`, `pixiewps`, `wash`, `hostapd`, `dnsmasq`
+
+   در آخر می‌نویسد: `requirements: 14/14 ready` و هرچه واقعا نصب نشده را نام می‌برد.
+3. روی ویندوز: `Wireshark` را با winget، و `hashcat` + `aircrack-ng` را به‌صورت باینری آماده دانلود و در `~/.wifihunter/tools` باز می‌کند (بدون نیاز به کامپایلر)
+4. روی Termux: `termux-api` + `root-repo`، حافظه مشترک، `wake-lock`؛ اگر اپ **Termux:API** نصب نباشد خودش APK را از F-Droid می‌گیرد و نصب‌کننده را باز می‌کند، مجوز Location را می‌دهد و اگر اسکن کار نکند Location سرویس را باز می‌کند
+5. لانچر `wh` + `~/.wifihunter/env` (شامل PATH ابزارهای دانلودشده) و اتصال به `~/.bashrc`
 6. لیست‌های محلی را می‌سازد و لیست‌های WPA را دانلود می‌کند
-7. `selftest` + `doctor` + یک اسکن واقعی می‌گیرد
+7. `selftest` + `doctor` + اسکن واقعی (تا ۳ بار تلاش با رفع مجوزها)
 
 سوییچ‌ها:
 
 ```bash
 bash setup.sh -y --huge                 # بدون سوال + لیست‌های بزرگ (rockyou)
+bash setup.sh --no-build                # فقط مخزن سیستم، بدون کامپایل
 bash setup.sh --dry-run                 # فقط نشان بده، کاری نکن
 bash setup.sh --out /sdcard/WiFiHunter  # مسیر خروجی دلخواه
 bash setup.sh --skip-wordlists --no-scan-test

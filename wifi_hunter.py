@@ -2667,6 +2667,27 @@ def build_report(scan: list[dict], found: list[dict], out: Path, pcap_info: dict
 # --------------------------------------------------------------------------------------
 # capability check
 # --------------------------------------------------------------------------------------
+# tools that only matter on unix-like hosts (windows gets them through kali/wsl)
+WIN_OPTIONAL = {"hcxdumptool", "hcxtools", "reaver", "bully", "pixiewps", "wash", "hostapd", "dnsmasq"}
+
+TOOL_REQS = (
+    ("scapy", "python pkg: live capture + injection", "pkg install python && pip install scapy"),
+    ("pywifi", "python pkg: scan without netsh", "pip install pywifi"),
+    ("tshark", "wireshark cli: capture/convert", "pkg install tshark   (deb: apt install tshark)"),
+    ("dumpcap", "wireshark cli: raw capture", "ships with tshark/wireshark"),
+    ("hashcat", "GPU cracking (22000 mode)", "pkg install root-repo && pkg install hashcat"),
+    ("aircrack-ng", "WEP/handshake cracking", "pkg install root-repo && pkg install aircrack-ng"),
+    ("hcxdumptool", "PMKID/SAE capture", "build: github.com/ZerBea/hcxdumptool"),
+    ("hcxtools", "pcap -> 22000 conversion", "build: github.com/ZerBea/hcxtools"),
+    ("reaver", "WPS attack", "apt install reaver   (termux: build from source)"),
+    ("bully", "WPS attack (alternative)", "apt install bully"),
+    ("pixiewps", "offline WPS pixie-dust", "pkg install root-repo && pkg install pixiewps"),
+    ("wash", "WPS AP discovery", "comes with reaver, or build: github.com/t6x/reaver-wps-fork-t6x"),
+    ("hostapd", "evil twin AP", "apt install hostapd   (termux: build from source)"),
+    ("dnsmasq", "evil twin dhcp/dns", "pkg install root-repo && pkg install dnsmasq"),
+)
+
+
 def cmd_doctor(args) -> int:
     hr("capability check")
     say(f"platform    : {platform.platform()}")
@@ -2691,30 +2712,32 @@ def cmd_doctor(args) -> int:
 
     say("")
     say("external tools:")
-    for tool, note in (
-        ("scapy", "python pkg: live capture + injection"),
-        ("pywifi", "python pkg: scan/connect without netsh"),
-        ("tshark", "wireshark cli: capture/convert"),
-        ("dumpcap", "wireshark cli: raw capture"),
-        ("hashcat", "GPU cracking (22000 mode)"),
-        ("aircrack-ng", "WEP/handshake cracking"),
-        ("hcxdumptool", "PMKID/SAE capture"),
-        ("hcxtools", "pcap -> 22000 conversion"),
-        ("reaver", "WPS attack"),
-        ("bully", "WPS attack (alternative)"),
-        ("pixiewps", "offline WPS pixie-dust"),
-        ("wash", "WPS AP discovery"),
-        ("hostapd", "evil twin AP"),
-        ("dnsmasq", "evil twin dhcp/dns"),
-    ):
+    ready = 0
+    total = 0
+    missing: list[str] = []
+    for tool, note, hint in TOOL_REQS:
+        optional_here = IS_WIN and tool in WIN_OPTIONAL
         if tool in ("scapy", "pywifi"):
             try:
                 __import__(tool)
-                say(f"  {col('OK ', C.GRN)} {tool:14s} {note}")
+                ok_here = True
             except Exception:
-                say(f"  {col('-- ', C.DIM)} {tool:14s} {note}")
+                ok_here = False
         else:
-            say(f"  {col('OK ', C.GRN) if have(tool) else col('-- ', C.DIM)} {tool:14s} {note}")
+            ok_here = have(tool)
+        mark = col("OK ", C.GRN) if ok_here else (col("n/a", C.DIM) if optional_here else col("-- ", C.RED))
+        say(f"  {mark} {tool:14s} {note}")
+        if not ok_here and not optional_here:
+            missing.append(tool)
+            say(f"       {col('fix:', C.DIM)} {hint}")
+        if not optional_here:
+            total += 1
+            ready += 1 if ok_here else 0
+    mark = col("complete", C.GRN) if not missing else col(f"{total - ready} missing", C.YEL)
+    say("")
+    say(f"requirements: {ready}/{total} - {mark}")
+    if missing:
+        say(f"run {col('bash setup.sh', C.CYN)} to install what can be installed here")
 
     say("")
     hr("what actually works here")
