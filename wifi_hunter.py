@@ -3743,7 +3743,7 @@ def fetch_list(name: str, force: bool = False) -> Path | None:
     DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
     dest = DOWNLOAD_DIR / f"{name}.txt"
     if dest.exists() and not force and dest.stat().st_size > 200:
-        info(f"{name}: already present ({dest.stat().st_size // 1024} KB)")
+        info(f"{name}: already present ({human(dest.stat().st_size)}B)")
         return dest
 
     import urllib.request

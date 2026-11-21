@@ -23,6 +23,7 @@ HUGE=0
 SKIP_WORDLISTS=0
 SCAN_TEST=1
 UNINSTALL=0
+OUT_OVERRIDE=""
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 cd "$REPO_DIR" || exit 1
@@ -84,6 +85,7 @@ while [ $# -gt 0 ]; do
         --skip-wordlists) SKIP_WORDLISTS=1 ;;
         --no-scan-test) SCAN_TEST=0 ;;
         --uninstall) UNINSTALL=1 ;;
+        --out) shift; OUT_OVERRIDE="${1:-}" ;;
         -h|--help) usage ;;
         *) warn "unknown option: $1"; usage ;;
     esac
@@ -92,18 +94,16 @@ done
 
 # ------------------------------------------------------------- detection ----
 ENV_KIND="unknown"
-case "$(uname -s 2>/dev/null)" in
-    Linux)
-        if [ -n "${TERMUX_VERSION:-}" ] || printf '%s' "${PREFIX:-}" | grep -q com.termux; then
-            ENV_KIND="termux"
-        else
-            ENV_KIND="linux"
-        fi
-        ;;
-    Darwin) ENV_KIND="macos" ;;
-    MINGW*|MSYS*|CYGWIN*) ENV_KIND="windows" ;;
-    *) ENV_KIND="unknown" ;;
-esac
+if [ -n "${TERMUX_VERSION:-}" ] || printf '%s' "${PREFIX:-}" | grep -q 'com\.termux'; then
+    ENV_KIND="termux"
+else
+    case "$(uname -s 2>/dev/null)" in
+        Linux) ENV_KIND="linux" ;;
+        Darwin) ENV_KIND="macos" ;;
+        MINGW*|MSYS*|CYGWIN*) ENV_KIND="windows" ;;
+        *) ENV_KIND="unknown" ;;
+    esac
+fi
 
 PY="python"
 have python3 && PY="python3"
@@ -129,7 +129,7 @@ if [ "$UNINSTALL" = 1 ]; then
         fi
     done
     if [ -f "$HOME/.bashrc" ] && grep -q "wifihunter/env" "$HOME/.bashrc" 2>/dev/null; then
-        run_shell "grep -v 'wifihunter/env' '$HOME/.bashrc' > '$HOME/.bashrc.tmp' && mv '$HOME/.bashrc.tmp' '$HOME/.bashrc'"
+        run_shell "grep -v 'wifihunter' '$HOME/.bashrc' > '$HOME/.bashrc.tmp' && mv '$HOME/.bashrc.tmp' '$HOME/.bashrc'"
         ok "cleaned ~/.bashrc"
     fi
     run rm -rf "$HOME/.wifihunter"
@@ -138,18 +138,28 @@ if [ "$UNINSTALL" = 1 ]; then
 fi
 
 # ------------------------------------------------------------- packages ----
+linux_install() {  # package
+    case "${SUDO_PKG:-}" in
+        pacman) exec_cmd="$SUDO_PKG -S --noconfirm --needed" ;;
+        zypper) exec_cmd="$SUDO_PKG install -y" ;;
+        "") return 1 ;;
+        *) exec_cmd="$SUDO_PKG install -y" ;;
+    esac
+    if [ "$(id -u)" = 0 ]; then
+        if [ "$DRY" = 1 ]; then printf '    %s %s %s
+' "${DIM}+${R}" "$exec_cmd" "$1"; else $exec_cmd "$1" >/dev/null 2>&1; fi
+    else
+        if [ "$DRY" = 1 ]; then printf '    %s sudo %s %s
+' "${DIM}+${R}" "$exec_cmd" "$1"; else sudo $exec_cmd "$1" >/dev/null 2>&1; fi
+    fi
+}
+
 pkg_install_list() {  # name... -> best effort per package
     for p in "$@"; do
         case "$ENV_KIND" in
             termux) run pkg install -y "$p" >/dev/null 2>&1 || warn "skip: $p" ;;
-            linux)
-                if [ "$(id -u)" = 0 ]; then
-                    $SUDO_PKG install -y "$p" >/dev/null 2>&1 || warn "skip: $p"
-                else
-                    run sudo "$SUDO_PKG" install -y "$p" >/dev/null 2>&1 || warn "skip: $p"
-                fi
-                ;;
-            macos) run brew install "$p" >/dev/null 2>&1 || warn "skip: $p" ;;
+            linux)  linux_install "$p" || warn "skip: $p" ;;
+            macos)  run brew install "$p" >/dev/null 2>&1 || warn "skip: $p" ;;
             *) : ;;
         esac
     done
@@ -177,10 +187,6 @@ if ! have "$PY"; then
 fi
 ok "python: $("$PY" -V 2>&1)"
 
-PIP_ARGS=""
-if [ "$("$PY" -c 'import sys; print(1 if sys.version_info < (3,11) else 0)')" = "1" ]; then
-    PIP_ARGS=""
-fi
 run "$PY" -m pip install --upgrade pip >/dev/null 2>&1 || warn "pip self-upgrade skipped"
 
 step "2/9 python packages (scapy = live capture)"
@@ -220,6 +226,7 @@ if [ "$ENV_KIND" = "termux" ]; then
         warn "no shared storage - output stays in $DEFAULT_OUT"
     fi
 fi
+[ -n "$OUT_OVERRIDE" ] && DEFAULT_OUT="$OUT_OVERRIDE"
 run mkdir -p "$DEFAULT_OUT"
 
 if [ "$DRY" = 0 ]; then

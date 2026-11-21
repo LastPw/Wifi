@@ -6,6 +6,36 @@
 
 ---
 
+## نصب خودکار (انگلیسی، یک دستور)
+
+```bash
+bash setup.sh
+```
+
+خودش محیط را تشخیص می‌دهد (Termux / Debian-Ubuntu-Kali / Fedora / Arch / macOS / Git-Bash) و:
+
+1. پایتون و pip را نصب/به‌روز می‌کند
+2. `scapy` را نصب می‌کند (کپچر زنده)
+3. ابزارهای همراه را اگر در مخزن سیستم بود نصب می‌کند: `termux-api`، `hashcat`، `aircrack-ng`، `hcxdumptool`، `reaver`، `pixiewps`، `hostapd`، `dnsmasq`، `tshark`، `iw`، `tcpdump`، `tsu`
+4. روی Termux: حافظه مشترک، `wake-lock`، باز کردن تنظیمات Termux:API برای مجوز Location، تنظیم مسیر خروجی روی `~/storage/shared/WiFiHunter`
+5. لانچر `wh` می‌سازد و `~/.bashrc` را وصل می‌کند
+6. لیست‌های محلی را می‌سازد و لیست‌های WPA را دانلود می‌کند
+7. `selftest` + `doctor` + یک اسکن واقعی می‌گیرد
+
+سوییچ‌ها:
+
+```bash
+bash setup.sh -y --huge                 # بدون سوال + لیست‌های بزرگ (rockyou)
+bash setup.sh --dry-run                 # فقط نشان بده، کاری نکن
+bash setup.sh --out /sdcard/WiFiHunter  # مسیر خروجی دلخواه
+bash setup.sh --skip-wordlists --no-scan-test
+bash setup.sh --uninstall               # فقط لانچر/env را پاک کن
+```
+
+بعد از نصب، از هر جا: `wh`
+
+---
+
 ## اجرا: فقط منو
 
 ```bash
@@ -125,9 +155,11 @@ python wifi_hunter.py report --scan out/scan.json --found out/found.json
 ## اندروید با Termux
 
 ```bash
-bash scripts/termux-setup.sh          # python + termux-api + تست صحت
+bash scripts/termux-setup.sh          # نصب قدیمی‌تر/سبک‌تر (فقط Termux)
 python wifi_hunter.py                # منو
 ```
+
+یا ساده‌تر: همان `bash setup.sh` در ریشه پروژه (بالاتر توضیح داده شد).
 
 برای اسکن لازم است: اپ **Termux:API** نصب باشد، مجوز **Location** به آن داده شده باشد و GPS روشن باشد (`pkg install termux-api` هم لازم است).
 
